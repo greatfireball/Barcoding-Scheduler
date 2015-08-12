@@ -8,6 +8,7 @@ use Net::SCP;
 use Getopt::Long;
 
 use File::Basename;
+use File::Temp;
 
 GetOptions(
     'hostname=s' => \(my $hostname),
@@ -57,8 +58,6 @@ while (<FH>)
 {
     chomp($_);
 
-    my ($raw, $fasta, $tsv, $in, $time, $email) = split(/\|/, $_);
-
     if (exists $dataset{$_})
     {
 	warn "Dataset '$_' is already done... Deleting!\n";
@@ -68,6 +67,13 @@ while (<FH>)
 close(FH) || die "Unable to close file '$file_done'";
 
 printf STDERR "Found %d jobs\n", (keys %dataset)+0;
+
+# create three output filenames
+
+my (undef, $fasta) = File::Temp::tempfile(OPEN => 0);
+my (undef, $tsv) = File::Temp::tempfile(OPEN => 0);
+my (undef, $raw) = File::Temp::tempfile(OPEN => 0);
+my (undef, $in) = File::Temp::tempfile(OPEN => 0);
 
 foreach (keys %dataset)
 {
