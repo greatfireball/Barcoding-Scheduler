@@ -34,7 +34,7 @@ my $scp = Net::SCP->new( "$hostname" );
 # get the current cluster.info
 $scp->get($controlfile) || die $scp->{errstr};
 
-my ($file, undef, undef) = fileparse($controlfile);
+my ($file, $clusterpath, undef) = fileparse($controlfile);
 
 open(FH, "<", $file) || die "Unable to load file '$file'";
 my %dataset = ();
@@ -159,6 +159,10 @@ foreach (keys %dataset)
     $smtp->quit;
 
     ### create finished dataset
+    open(FH, ">>", $file_done) || die "Unable to create file '$file_done'\n";
+    print FH $_,"\n";
+    close(FH) || die "Unable to close file '$file_done' after creation\n";
+
     ### push cluster.done to server
 }
 
