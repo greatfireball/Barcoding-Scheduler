@@ -4,11 +4,14 @@ use strict;
 use warnings;
 
 use Net::SCP;
+use Net::SMTP;
 
 use Getopt::Long;
 
 use File::Basename;
 use File::Temp;
+
+use Text::Wrap;
 
 GetOptions(
     'hostname=s'    => \(my $hostname),
@@ -16,9 +19,11 @@ GetOptions(
     'tax=s'         => \(my $tax),
     'db=s'          => \(my $db),
     'utax=s'        => \(my $utax),
+    'mailhost=s'    => \(my $mailhost),
+    'from=s'        => \(my $from_cc_email),
 ) || die "Error parsing of input parameters\n";
 
-unless (defined $hostname && defined $controlfile && defined $db && defined $tax && defined $utax)
+unless (defined $hostname && defined $controlfile && defined $db && defined $tax && defined $utax && defined $mailhost && defined $from_cc_email)
 {
     die "Unable to get the required parameter hostname and conrolfile\n";
 }
@@ -118,6 +123,41 @@ foreach (keys %dataset)
     }
 
     ### send email
+    my $subject = 'Barcoding@ITS2DB ';
+    my $msg = "";
+
+    if ($failed)
+    {
+	$subject .= "failed...";
+
+	$msg = "The barcoding of your data set failed. You are free to resubmit your data set. If the this fails more often, please do not hesitate to contact the its2db\@uni-wuerzburg.de";
+
+    } else {
+	$subject .= "finished...";
+
+	$msg = sprintf wrap('', '', "The barcoding of your dataset finished. Results are avaiable via download at \n\n\traw utax output: %s,\n\tfasta file: %s\n\ttsv output: %s"),  map { my ($file, undef, undef) = fileparse($_); 'http://its2.test.biozentrum.uni-wuerzburg.de/static/data/tmp/'."$file"} ($dataset{$_}{rawout}, $dataset{$_}{fastaout}, $dataset{$_}{tsvout});
+    }
+
+    # add a bottom line
+    $msg .= "\n\n\nBest regards,\nITS2DB Barcoding Scheduler\n<its2db\@uni-wuerzburg.de>\n";
+
+    my $smtp = Net::SMTP->new($mailhost, Timeout => 60);
+
+    $smtp->mail($from_cc_email);
+
+    if ($smtp->to($dataset{$_}{email}) && $smtp->cc($from_cc_email))
+    {
+	$smtp->data();
+	$smtp->datasend("To: ".$dataset{$_}{email}."\n");
+	$smtp->datasend("Subject: $subject\n");
+	$smtp->datasend("\n");
+	$smtp->datasend("$msg");
+	$smtp->dataend();
+    } else {
+     print "Error: ", $smtp->message();
+    }
+    $smtp->quit;
+
     ### create finished dataset
     ### push cluster.done to server
 }
