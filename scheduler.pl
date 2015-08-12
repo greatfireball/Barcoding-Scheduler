@@ -82,6 +82,32 @@ foreach (keys %dataset)
 {
     warn "Working on dataset '$_'\n";
     ### run run_utax script
+    # Download the input file
+    $scp->get($dataset{$_}{input}, $in) || die $scp->{errstr};
+
+    # run our script
+    my @cmd = (
+	'run_utax.pl',
+	'--database', $db,
+	'--taxonomy', $tax,
+	'--in',       $in,
+	'--outfile',  $raw,
+	'--tsv',      $tsv,
+	'--fasta',    $fasta,
+	'--utax',     $utax,
+	'--force'
+	);
+
+    system(@cmd);
+
+    my $failed = 0;
+
+    if ($? != 0)
+    {
+	warn "Call of run_utax.pl failed!\n";
+	$failed = 1;
+    }
+
     ### upload the files to the server
     ### send email
     ### create finished dataset
