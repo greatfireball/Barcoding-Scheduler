@@ -11,11 +11,14 @@ use File::Basename;
 use File::Temp;
 
 GetOptions(
-    'hostname=s' => \(my $hostname),
-    'controlfile=s' => \(my $controlfile)
+    'hostname=s'    => \(my $hostname),
+    'controlfile=s' => \(my $controlfile),
+    'tax=s'         => \(my $tax),
+    'db=s'          => \(my $db),
+    'utax=s'        => \(my $utax),
 ) || die "Error parsing of input parameters\n";
 
-unless (defined $hostname && defined $controlfile)
+unless (defined $hostname && defined $controlfile && defined $db && defined $tax && defined $utax)
 {
     die "Unable to get the required parameter hostname and conrolfile\n";
 }
