@@ -164,6 +164,8 @@ foreach (keys %dataset)
     close(FH) || die "Unable to close file '$file_done' after creation\n";
 
     ### push cluster.done to server
+    #warn "Pushing the file '$file_done' to $hostname:$clusterpath/$file_done\n";
+    #$scp->put($file_done, $clusterpath.'/'.$file_done) || die $scp->{errstr};
 }
 
 ### done
