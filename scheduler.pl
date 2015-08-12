@@ -109,6 +109,14 @@ foreach (keys %dataset)
     }
 
     ### upload the files to the server
+    # Upload the output files if the run did not fail
+    unless ($failed)
+    {
+	$scp->put($fasta, $dataset{$_}{fastaout}, $in) || die $scp->{errstr};
+	$scp->put($tsv, $dataset{$_}{tsvout}, $in) || die $scp->{errstr};
+	$scp->put($raw, $dataset{$_}{rawout}, $in) || die $scp->{errstr};
+    }
+
     ### send email
     ### create finished dataset
     ### push cluster.done to server
