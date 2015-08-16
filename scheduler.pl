@@ -47,7 +47,14 @@ while (<FH>)
     #my ($raw, $fasta, $tsv, $in, $time, $email) = split(/\|/, $_);
     my ($raw, $fasta, $tsv, $in, $time, $email, $baseurl) = split(/\|/, $_);
 
-    $baseurl =~ s/\/barcoding//;
+    # if not defined... We have a default value:
+    unless (defined $baseurl)
+    {
+	$baseurl = 'http://its2.test.biozentrum.uni-wuerzburg.de/barcode';
+    }
+
+    # strip the /barcode at the end of the url
+    $baseurl =~ s/\/barcode$//;
 
     $dataset{$_} = { rawout => $raw,
 		     fastaout => $fasta,
@@ -90,12 +97,12 @@ my (undef, $tsv) = File::Temp::tempfile(OPEN => 0);
 my (undef, $raw) = File::Temp::tempfile(OPEN => 0);
 my (undef, $in) = File::Temp::tempfile(OPEN => 0);
 
-foreach (keys %dataset)
+foreach my $curr_set (keys %dataset)
 {
-    warn "Working on dataset '$_'\n";
+    warn "Working on dataset '$curr_set'\n";
     ### run run_utax script
     # Download the input file
-    $scp->get($dataset{$_}{input}, $in) || die $scp->{errstr};
+    $scp->get($dataset{$curr_set}{input}, $in) || die $scp->{errstr};
 
     # run our script
     my @cmd = (
@@ -124,9 +131,9 @@ foreach (keys %dataset)
     # Upload the output files if the run did not fail
     unless ($failed)
     {
-	$scp->put($fasta, $dataset{$_}{fastaout}, $in) || die $scp->{errstr};
-	$scp->put($tsv, $dataset{$_}{tsvout}, $in) || die $scp->{errstr};
-	$scp->put($raw, $dataset{$_}{rawout}, $in) || die $scp->{errstr};
+	$scp->put($fasta, $dataset{$curr_set}{fastaout}, $in) || die $scp->{errstr};
+	$scp->put($tsv, $dataset{$curr_set}{tsvout}, $in) || die $scp->{errstr};
+	$scp->put($raw, $dataset{$curr_set}{rawout}, $in) || die $scp->{errstr};
     }
 
     ### send email
@@ -137,25 +144,25 @@ foreach (keys %dataset)
     {
 	$subject .= "failed...";
 
-	$msg = "The barcoding of your data set failed. You are free to resubmit your data set. If the this fails more often, please do not hesitate to contact the its2db\@uni-wuerzburg.de";
+	$msg = "The barcoding of your data set failed. You are free to resubmit your data set. If the this fails more often, please do not hesitate to contact the its2db\@lists.uni-wuerzburg.de";
 
     } else {
 	$subject .= "finished...";
 
-	$msg = sprintf wrap('', '', "The barcoding of your dataset finished. Results are avaiable via download at \n\n\traw utax output: %s,\n\tfasta file: %s\n\ttsv output: %s"),  map { my ($file, undef, undef) = fileparse($_); $dataset{$_}{baseurl}.'/static/data/tmp/'."$file"} ($dataset{$_}{rawout}, $dataset{$_}{fastaout}, $dataset{$_}{tsvout});
+	$msg = sprintf wrap('', '', "The barcoding of your dataset finished. Results are avaiable via download at \n\n\traw utax output: %s,\n\tfasta file: %s\n\ttsv output: %s"),  map { my ($file, undef, undef) = fileparse($_); $dataset{$curr_set}{baseurl}.'/static/data/tmp/'."$file"} ($dataset{$curr_set}{rawout}, $dataset{$curr_set}{fastaout}, $dataset{$curr_set}{tsvout});
     }
 
     # add a bottom line
-    $msg .= "\n\n\nBest regards,\nITS2DB Barcoding Scheduler\n<its2db\@uni-wuerzburg.de>\n";
+    $msg .= "\n\n\nBest regards,\nITS2DB Barcoding Scheduler\n<its2db\@lists.uni-wuerzburg.de>\n";
 
     my $smtp = Net::SMTP->new($mailhost, Timeout => 60);
 
     $smtp->mail($from_cc_email);
 
-    if ($smtp->to($dataset{$_}{email}) && $smtp->cc($from_cc_email))
+    if ($smtp->to($dataset{$curr_set}{email}) && $smtp->cc($from_cc_email))
     {
 	$smtp->data();
-	$smtp->datasend("To: ".$dataset{$_}{email}."\n");
+	$smtp->datasend("To: ".$dataset{$curr_set}{email}."\n");
 	$smtp->datasend("Subject: $subject\n");
 	$smtp->datasend("\n");
 	$smtp->datasend("$msg");
@@ -167,7 +174,7 @@ foreach (keys %dataset)
 
     ### create finished dataset
     open(FH, ">>", $file_done) || die "Unable to create file '$file_done'\n";
-    print FH $_,"\n";
+    print FH $curr_set,"\n";
     close(FH) || die "Unable to close file '$file_done' after creation\n";
 
     ### push cluster.done to server
