@@ -42,14 +42,21 @@ while (<FH>)
 {
     chomp($_);
 
-    my ($raw, $fasta, $tsv, $in, $time, $email) = split(/\|/, $_);
+    # Since 2015-08-15 we included another field containing the
+    # base-URL for the download links.
+    #my ($raw, $fasta, $tsv, $in, $time, $email) = split(/\|/, $_);
+    my ($raw, $fasta, $tsv, $in, $time, $email, $baseurl) = split(/\|/, $_);
+
+    $baseurl =~ s/\/barcoding//;
 
     $dataset{$_} = { rawout => $raw,
 		     fastaout => $fasta,
 		     tsvout => $tsv,
 		     input => $in,
 		     time => $time,
-		     email => $email };
+		     email => $email,
+		     baseurl => $baseurl,
+    };
 }
 close(FH) || die "Unable to close file '$file'";
 
@@ -135,7 +142,7 @@ foreach (keys %dataset)
     } else {
 	$subject .= "finished...";
 
-	$msg = sprintf wrap('', '', "The barcoding of your dataset finished. Results are avaiable via download at \n\n\traw utax output: %s,\n\tfasta file: %s\n\ttsv output: %s"),  map { my ($file, undef, undef) = fileparse($_); 'http://its2.test.biozentrum.uni-wuerzburg.de/static/data/tmp/'."$file"} ($dataset{$_}{rawout}, $dataset{$_}{fastaout}, $dataset{$_}{tsvout});
+	$msg = sprintf wrap('', '', "The barcoding of your dataset finished. Results are avaiable via download at \n\n\traw utax output: %s,\n\tfasta file: %s\n\ttsv output: %s"),  map { my ($file, undef, undef) = fileparse($_); $dataset{$_}{baseurl}.'/static/data/tmp/'."$file"} ($dataset{$_}{rawout}, $dataset{$_}{fastaout}, $dataset{$_}{tsvout});
     }
 
     # add a bottom line
